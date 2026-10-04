@@ -1,72 +1,195 @@
+import sqlite3
+
 import pandas as pd
 
 
-df = pd.read_csv(
-    "data/workforce_planning.csv"
+DATABASE = (
+    "data/resource_planning.db"
 )
 
 
-print("=" * 50)
-print("WORKFORCE PLANNING DATA SUMMARY")
-print("=" * 50)
+connection = sqlite3.connect(
+    DATABASE
+)
+
+
+# -------------------------------------------------
+# OVERALL KPI SUMMARY
+# -------------------------------------------------
+
+overall_summary = pd.read_sql_query(
+    """
+    SELECT
+        SUM(workload)
+            AS total_workload,
+
+        SUM(required_staff)
+            AS required_staff,
+
+        SUM(scheduled_staff)
+            AS scheduled_staff,
+
+        ROUND(
+            SUM(scheduled_staff) * 100.0
+            / SUM(required_staff),
+            1
+        )
+            AS coverage_rate,
+
+        ROUND(
+            AVG(utilization),
+            1
+        )
+            AS average_utilization,
+
+        SUM(
+            CASE
+                WHEN staffing_gap < 0
+                THEN 1
+                ELSE 0
+            END
+        )
+            AS understaffed_shifts,
+
+        SUM(
+            CASE
+                WHEN coverage_risk = 'High'
+                THEN 1
+                ELSE 0
+            END
+        )
+            AS high_risk_shifts
+
+    FROM workforce_planning
+    """,
+    connection
+)
+
+
+# -------------------------------------------------
+# STATION SUMMARY
+# -------------------------------------------------
+
+station_summary = pd.read_sql_query(
+    """
+    SELECT
+        station,
+
+        SUM(workload)
+            AS total_workload,
+
+        SUM(required_staff)
+            AS required_staff,
+
+        SUM(scheduled_staff)
+            AS scheduled_staff,
+
+        SUM(scheduled_staff)
+            - SUM(required_staff)
+            AS staffing_gap,
+
+        ROUND(
+            SUM(scheduled_staff) * 100.0
+            / SUM(required_staff),
+            1
+        )
+            AS coverage_rate,
+
+        ROUND(
+            AVG(utilization),
+            1
+        )
+            AS average_utilization
+
+    FROM workforce_planning
+
+    GROUP BY station
+
+    ORDER BY coverage_rate ASC
+    """,
+    connection
+)
+
+
+# -------------------------------------------------
+# SHIFT SUMMARY
+# -------------------------------------------------
+
+shift_summary = pd.read_sql_query(
+    """
+    SELECT
+        shift,
+
+        SUM(workload)
+            AS total_workload,
+
+        SUM(required_staff)
+            AS required_staff,
+
+        SUM(scheduled_staff)
+            AS scheduled_staff,
+
+        ROUND(
+            SUM(scheduled_staff) * 100.0
+            / SUM(required_staff),
+            1
+        )
+            AS coverage_rate,
+
+        ROUND(
+            AVG(utilization),
+            1
+        )
+            AS average_utilization
+
+    FROM workforce_planning
+
+    GROUP BY shift
+
+    ORDER BY total_workload DESC
+    """,
+    connection
+)
+
+
+connection.close()
+
+
+# -------------------------------------------------
+# DISPLAY RESULTS
+# -------------------------------------------------
+
+print()
+print("=" * 60)
+print("OPERATIONAL RESOURCE PLANNING SUMMARY")
+print("=" * 60)
 
 print()
 
-print(
-    f"Total Records: {len(df)}"
-)
-
-print(
-    f"Total Workload: "
-    f"{df['workload'].sum()}"
-)
-
-print(
-    f"Required Staff: "
-    f"{df['required_staff'].sum()}"
-)
-
-print(
-    f"Scheduled Staff: "
-    f"{df['scheduled_staff'].sum()}"
-)
-
-print(
-    f"Average Coverage Rate: "
-    f"{df['coverage_rate'].mean():.1f}%"
-)
-
-print(
-    f"Average Utilization: "
-    f"{df['utilization'].mean():.1f}%"
-)
-
-print(
-    f"Understaffed Shifts: "
-    f"{(df['staffing_gap'] < 0).sum()}"
-)
-
-print(
-    f"High-Risk Shifts: "
-    f"{(df['coverage_risk'] == 'High').sum()}"
-)
+print(overall_summary.to_string(
+    index=False
+))
 
 print()
 
-print("Records by Station:")
-
-print(
-    df[
-        "station"
-    ].value_counts()
-)
+print("=" * 60)
+print("STATION PERFORMANCE")
+print("=" * 60)
 
 print()
 
-print("Records by Shift:")
+print(station_summary.to_string(
+    index=False
+))
 
-print(
-    df[
-        "shift"
-    ].value_counts()
-)
+print()
+
+print("=" * 60)
+print("SHIFT PERFORMANCE")
+print("=" * 60)
+
+print()
+
+print(shift_summary.to_string(
+    index=False
+))

@@ -247,11 +247,44 @@ workforce_df = pd.DataFrame(
 
 
 # -------------------------------------------------
-# SAVE DATA
+# CREATE RAW DATASET
 # -------------------------------------------------
 
-workforce_df.to_csv(
-    "data/workforce_planning.csv",
+raw_df = workforce_df.copy()
+
+
+# Intentional quality issue:
+# extra spaces around a station name.
+raw_df.loc[4, "station"] = " Dallas "
+
+
+# Intentional quality issue:
+# inconsistent shift capitalization.
+raw_df.loc[12, "shift"] = "morning"
+
+
+# Intentional quality issue:
+# inconsistent risk capitalization.
+raw_df.loc[20, "coverage_risk"] = "medium"
+
+
+# Intentional quality issue:
+# duplicate record.
+raw_df = pd.concat(
+    [
+        raw_df,
+        raw_df.iloc[[0]]
+    ],
+    ignore_index=True
+)
+
+
+# -------------------------------------------------
+# SAVE RAW DATA
+# -------------------------------------------------
+
+raw_df.to_csv(
+    "data/workforce_planning_raw.csv",
     index=False
 )
 
@@ -261,40 +294,37 @@ workforce_df.to_csv(
 # -------------------------------------------------
 
 print(
-    "Synthetic workforce planning data "
+    "Synthetic RAW workforce planning data "
     "created successfully."
 )
 
 print()
 
 print(
-    f"Records created: "
-    f"{len(workforce_df)}"
+    f"Raw records created: "
+    f"{len(raw_df)}"
 )
 
 print(
     f"Date range: "
-    f"{workforce_df['date'].min()} "
+    f"{raw_df['date'].min()} "
     f"to "
-    f"{workforce_df['date'].max()}"
+    f"{raw_df['date'].max()}"
 )
 
 print(
-    f"Stations: "
-    f"{workforce_df['station'].nunique()}"
+    f"Stations represented: "
+    f"{raw_df['station'].nunique()}"
 )
 
 print(
-    f"Shifts: "
-    f"{workforce_df['shift'].nunique()}"
+    f"Shifts represented: "
+    f"{raw_df['shift'].nunique()}"
 )
 
 print()
 
-print("Coverage Risk Summary:")
-
 print(
-    workforce_df[
-        "coverage_risk"
-    ].value_counts()
+    "Intentional data-quality issues "
+    "were added for cleaning practice."
 )
